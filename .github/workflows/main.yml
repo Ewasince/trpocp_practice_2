@@ -10,14 +10,6 @@ on:
 env:
   PY_VER: "3.12"
 
-x-steps-python: &steps-python
-  - uses: actions/setup-python@v5
-    with:
-      python-version: ${{ env.PY_VER }}
-
-x-steps-uv: &steps-uv
-  - uses: astral-sh/setup-uv@v7
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,8 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - *steps-python
-      - *steps-uv
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VER }}
+      - uses: astral-sh/setup-uv@v7
 
       - name: Cache virtualenv
         uses: actions/cache@v4
@@ -59,8 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - *steps-python
-      - *steps-uv
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VER }}
+      - uses: astral-sh/setup-uv@v7
 
       - name: Build docs (MkDocs)
         run: |
