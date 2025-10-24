@@ -2,6 +2,7 @@ def main():
     print("Hello from trpocp-practice-2!")
 
 def mod_function(val: str) -> str:
+    pass
     return f"__{val}__"
 
 
