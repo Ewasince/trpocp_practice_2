@@ -16,7 +16,7 @@ x-steps-python: &steps-python
       python-version: ${{ env.PY_VER }}
 
 x-steps-uv: &steps-uv
-  - uses: astral-sh/setup-uv@v7  # ставит uv/uvx и добавляет в PATH
+  - uses: astral-sh/setup-uv@v7
 
 jobs:
   build:
@@ -64,7 +64,6 @@ jobs:
 
       - name: Build docs (MkDocs)
         run: |
-          # Требуются mkdocs.yml и docs/
           uvx --from mkdocs-material mkdocs build --strict
 
       - name: Upload Pages artifact
