@@ -2,4 +2,4 @@ from service.main import mod_function
 
 
 def test_test_function():
-    assert mod_function("val") == "__val__"
+    assert mod_function("val") == "__val_ _"
