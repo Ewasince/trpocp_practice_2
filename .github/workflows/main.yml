@@ -66,4 +66,3 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: |
           uv run pytest
-          sleep 10
