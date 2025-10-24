@@ -37,8 +37,44 @@ jobs:
 
   tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Cache uv & virtualenv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('uv.lock') }}-${{ hashFiles('pyproject.toml', 'requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+
+      - name: Sync dependencies (pyproject/requirements)
+        env:
+          UV_PYTHON_DOWNLOADS: "0"
+        run: |
+          set -e
+          uv sync --frozen --dev
+
       - name: Run pytest
+        env:
+          CI: "true"
+          PYTHONUNBUFFERED: "1"
         run: uv run pytest
 
