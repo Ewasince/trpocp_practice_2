@@ -7,66 +7,40 @@ on:
     branches: [ "main", "development", "release" ]
   workflow_dispatch:
 
+env:
+  PY_VER: "3.12"
+
+x-steps-python: &steps-python
+  - uses: actions/setup-python@v5
+    with:
+      python-version: ${{ env.PY_VER }}
+
+x-steps-uv: &steps-uv
+  - uses: astral-sh/setup-uv@v7  # ставит uv/uvx и добавляет в PATH
+
 jobs:
-  setup-uv:
-    name: Setup uv
-    runs-on: ubuntu-latest
-    outputs:
-      uv-path: ${{ steps.export-path.outputs.uv-path }}
-    steps:
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Add uv to PATH
-        id: export-path
-        run: |
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          echo "uv-path=$HOME/.local/bin" >> "$GITHUB_OUTPUT"
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-install
-
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      - name: Run a multi-line script
-        run: |
+      - run: echo Hello, world!
+      - run: |
           echo Add other actions to build,
           echo test, and deploy your project.
 
   tests:
-    needs: setup-uv
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Use cached uv
-        run: echo "${{ needs.setup-uv.outputs.uv-path }}" >> "$GITHUB_PATH"
+      - *steps-python
+      - *steps-uv
 
       - name: Cache virtualenv
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version }}-venv-${{ hashFiles('uv.lock') }}-${{ hashFiles('pyproject.toml', 'requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version }}-venv-
+          key: ${{ runner.os }}-py${{ env.PY_VER }}-venv-${{ hashFiles('uv.lock') }}-${{ hashFiles('pyproject.toml', 'requirements*.txt') }}
+          restore-keys: ${{ runner.os }}-py${{ env.PY_VER }}-venv-
 
       - name: Sync dependencies (pyproject/requirements)
         env:
@@ -79,21 +53,18 @@ jobs:
         env:
           CI: "true"
           PYTHONUNBUFFERED: "1"
-        run: |
-          uv run pytest
+        run: uv run pytest
 
   docs:
-    needs: setup-uv
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Use cached uv
-        run: echo "${{ needs.setup-uv.outputs.uv-path }}" >> "$GITHUB_PATH"
+      - *steps-python
+      - *steps-uv
 
       - name: Build docs (MkDocs)
         run: |
-          # Требуется mkdocs.yml и каталог docs/
+          # Требуются mkdocs.yml и docs/
           uvx --from mkdocs-material mkdocs build --strict
 
       - name: Upload Pages artifact
