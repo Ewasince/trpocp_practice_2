@@ -1,5 +1,3 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
 on:
@@ -9,49 +7,34 @@ on:
     branches: [ "main", "development", "release" ]
   workflow_dispatch:
 
+env:
+  PY_VER: "3.12"
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      - name: Run a multi-line script
-        run: |
+      - run: echo Hello, world!
+      - run: |
           echo Add other actions to build,
           echo test, and deploy your project.
 
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PY_VER }}
+      - uses: astral-sh/setup-uv@v7
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Add uv to PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Cache uv & virtualenv
+      - name: Cache virtualenv
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('uv.lock') }}-${{ hashFiles('pyproject.toml', 'requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+          path: .venv
+          key: ${{ runner.os }}-py${{ env.PY_VER }}-venv-${{ hashFiles('uv.lock') }}-${{ hashFiles('pyproject.toml', 'requirements*.txt') }}
+          restore-keys: ${{ runner.os }}-py${{ env.PY_VER }}-venv-
 
       - name: Sync dependencies (pyproject/requirements)
         env:
@@ -64,5 +47,37 @@ jobs:
         env:
           CI: "true"
           PYTHONUNBUFFERED: "1"
+        run: uv run pytest
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VER }}
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Build docs (MkDocs)
         run: |
-          uv run pytest
+          uvx --from mkdocs-material mkdocs build --strict
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  deploy-docs:
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release'))
+    needs: docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
