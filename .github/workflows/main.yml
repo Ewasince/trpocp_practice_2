@@ -64,4 +64,6 @@ jobs:
         env:
           CI: "true"
           PYTHONUNBUFFERED: "1"
-        run: uv run pytest
+        run: |
+          uv run pytest
+          sleep 10
